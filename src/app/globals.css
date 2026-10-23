@@ -1,26 +1,352 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --wall: #e6e5e1;
+  --paper: #fbfaf7;
+  --plate: #efeeea;
+  --ink: #121212;
+  --muted: #6d6b66;
+  --line: rgba(18, 18, 18, 0.12);
+  --red: #d7261e;
+  --glass: rgba(250, 250, 248, 0.62);
+  --glass-edge: rgba(255, 255, 255, 0.75);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Real damped springs, sampled: soft settles with ~2% overshoot, bouncy with ~14%. */
+  --spring-soft: linear(0, 0.062, 0.203, 0.371, 0.535, 0.677, 0.792, 0.879, 0.94, 0.981, 1.005, 1.018, 1.023, 1.023, 1.02, 1.017, 1.013, 1.009, 1.006, 1.004, 1.002, 1.001, 1, 1, 1, 0.999, 0.999, 1, 1, 1, 1);
+  --spring-bouncy: linear(0, 0.065, 0.223, 0.423, 0.625, 0.805, 0.948, 1.049, 1.11, 1.137, 1.138, 1.122, 1.096, 1.067, 1.04, 1.017, 1, 0.988, 0.982, 0.98, 0.982, 0.985, 0.988, 0.992, 0.996, 0.999, 1.001, 1.002, 1.003, 1.003, 1.002, 1.002, 1.001, 1.001, 1, 1, 1, 1, 1, 1, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-wall: var(--wall);
+  --color-paper: var(--paper);
+  --color-plate: var(--plate);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-red: var(--red);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--wall);
+  color: var(--ink);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--red);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* The reel's type: heavy geometric caps. */
+.display {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+}
+
+/* Liquid-glass surface used by every floating control. */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 10px 30px -12px rgba(0, 0, 0, 0.25),
+    0 2px 6px -2px rgba(0, 0, 0, 0.08);
+}
+
+.glass-dark {
+  background: rgba(18, 18, 18, 0.72);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f4f3ef;
+}
+
+/* A polaroid: paper frame, a lighter plate for the product, a soft lift. */
+.polaroid {
+  background: var(--paper);
+  padding: 7% 7% 0;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.035),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 12px 24px -14px rgba(0, 0, 0, 0.35);
+}
+
+.polaroid-plate {
+  background: var(--plate);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* The sheet's blurred wall. Blur animates in on its own so nothing above it breaks backdrop-filter. */
+.sheet-backdrop {
+  background: rgba(228, 227, 223, 0.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  animation: backdrop-in 320ms ease both;
+  transition: backdrop-filter 220ms ease, -webkit-backdrop-filter 220ms ease, background-color 220ms ease;
+}
+.sheet-backdrop[data-closing] {
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  background: rgba(228, 227, 223, 0);
+}
+@keyframes backdrop-in {
+  from {
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+    background: rgba(228, 227, 223, 0);
+  }
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rise {
+  animation: rise 0.7s var(--ease-out) both;
+}
+
+/* A print being pinned to the wall: dropped in slightly big and askew, then it settles. */
+@keyframes pin-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -42px, 0) scale(1.14) rotate(-5deg);
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pin-in {
+  animation: pin-in 1000ms var(--spring-bouncy) both;
+}
+[data-paused] .pin-in {
+  animation-play-state: paused;
+}
+
+/* Wall pieces: hung slightly off, they straighten and lift when you reach for them. */
+.wall-card {
+  transform: rotate(var(--rot, 0deg));
+  transition:
+    transform 650ms var(--spring-bouncy),
+    box-shadow 400ms var(--ease-out);
+}
+@media (hover: hover) {
+  .wall-card:hover {
+    transform: translate3d(0, -10px, 0) rotate(calc(var(--rot, 0deg) * 0.15)) scale(1.035);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.04),
+      0 34px 46px -20px rgba(0, 0, 0, 0.45);
+  }
+}
+.wall-card:active {
+  transform: rotate(var(--rot, 0deg)) scale(0.97);
+  transition-duration: 160ms;
+}
+
+/* Follows the pointer across the wall and names what is under it. */
+.cursor-tag {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 35;
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.85;
+  transition:
+    opacity 180ms ease,
+    scale 380ms var(--spring-bouncy);
+}
+.cursor-tag[data-on] {
+  opacity: 1;
+  scale: 1;
+}
+@media (hover: none) {
+  .cursor-tag {
+    display: none;
+  }
+}
+
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.45);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.bump {
+  animation: bump 520ms var(--spring-bouncy);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.8);
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  45% {
+    transform: translateX(6px);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -24px, 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+.page-in {
+  animation: page-in 420ms ease;
+}
+
+/* Scroll reveals: things arrive as they come into view. */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 48px, 0) rotate(var(--reveal-rot, 0deg));
+  transition:
+    opacity 700ms var(--ease-out) var(--reveal-delay, 0ms),
+    transform 1100ms var(--spring-soft) var(--reveal-delay, 0ms);
+}
+.reveal[data-in] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Headline lines rise out of a mask. */
+.line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+.line-mask > span {
+  display: block;
+  animation: line-up 1000ms var(--spring-soft) both;
+  animation-delay: var(--line-delay, 0ms);
+}
+@keyframes line-up {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+}
+
+/* Collections index: the three prints fan out when the row is hovered. */
+.fan > span {
+  transform: translate3d(0, -50%, 0) rotate(var(--r));
+  transition: transform 700ms var(--spring-bouncy);
+}
+.group:hover .fan > span {
+  transform: translate3d(var(--dx), -56%, 0) rotate(calc(var(--r) * 2.4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Seedhe Maut signature split: grey | red, cut on a slash, red dropped a notch. */
+.signature-a {
+  color: #cfcfcf;
+  clip-path: polygon(0 0, 62% 0, 44% 100%, 0 100%);
+}
+.signature-b {
+  color: #cc1f1f;
+  clip-path: polygon(63.4% 0, 100% 0, 100% 100%, 45.4% 100%);
+  transform: translate3d(0, 0.065em, 0);
+}
+.reveal .signature-b {
+  opacity: 0;
+  transform: translate3d(0.12em, -0.35em, 0);
+}
+.reveal[data-in] .signature-b {
+  opacity: 1;
+  transform: translate3d(0, 0.065em, 0);
+  transition:
+    opacity 260ms ease 380ms,
+    transform 1100ms var(--spring-bouncy) 380ms;
 }
